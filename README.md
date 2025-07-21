@@ -90,7 +90,7 @@ docker-compose up --build
 
 O dashboard `dashboards/sicredi_data_pipeline.pbix`  utiliza os dados processados para gerar gráficos como: Inadimplência mensal, Inadimplência por cooperativa e Volume da taxa de juros.
 
-O notebook `notebooks/analise_sicredi.ipynb` utiliza os dados da camada `gold` para gerar análises como: Distribuição da idade dos associados, Verificação de tipos de dados e a Verificação de dados nulos.
+O notebook `notebooks/analise_sicredi.ipynb` utiliza os dados sem tratamento e com tratamento para gerar análises como: Distribuição da idade dos associados, Verificação de tipos de dados e a Verificação de dados nulos.
 
 ---
 
