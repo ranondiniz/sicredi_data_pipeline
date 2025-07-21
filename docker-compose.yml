@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  spark-master:
+    image: apache/spark:3.4.4
+    container_name: spark_master
+    hostname: spark-master
+    ports:
+      - "8081:8080" # UI do Spark Master
+      - "7077:7077" # Porta RPC do Spark Master
+    environment:
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+
+  spark-worker:
+    image: apache/spark:3.4.4
+    container_name: spark_worker
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1g
+    volumes:
+      - ./input:/app/input:rw
+      - ./scripts:/app/scripts:rw
+      - ./datalake:/app/datalake:rw
+    user: root 
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+
+  spark:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sicredi_spark
+    volumes:
+      - ./input:/app/input:rw
+      - ./scripts:/app/scripts:rw
+      - ./datalake:/app/datalake:rw
+    working_dir: /app
+    depends_on:
+      - spark-master
+    user: root 
+    command: bash -c "rm -rf /root/.ivy2/cache && \
+      /opt/spark/bin/spark-submit \
+      --master spark://spark-master:7077 \
+      --conf \"spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension\" \
+      --conf \"spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog\" \
+      --packages io.delta:delta-core_2.12:2.4.0 \
+      --repositories https://repo1.maven.org/maven2/ \
+      /app/scripts/pipeline_sicredi.py"
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sicredi_jupyter
+    volumes:
+      - ./input:/app/input:rw
+      - ./scripts:/app/scripts:rw
+      - ./datalake:/app/datalake:rw
+      - ./notebooks:/app/notebooks:rw
+    ports:
+      - "8888:8888"
+    working_dir: /app/notebooks
+    depends_on:
+      - spark-master
+    user: root 
+    command: >
+      jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --NotebookApp.token=''
